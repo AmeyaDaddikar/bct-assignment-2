@@ -39,7 +39,7 @@ class Wallet:
     }
 
     with open(file_path, 'wt') as f:
-      f.write(json.dumps(wallet_details))
+      f.write(json.dumps(wallet_details, indent=0))
 
 
 
