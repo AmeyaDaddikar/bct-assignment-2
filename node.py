@@ -12,13 +12,10 @@ blockchain = Blockchain()
 @app.route('/mine', methods=['GET'])
 def mine():
     last_block = blockchain.last_block
-    proof = blockchain.proof_of_work(last_block)
 
-    blockchain.new_transaction(
-        sender='0',
-        recipient=node_identifier,
-        amount=20
-        )
+
+    proof = blockchain.mine_proof_of_work(last_block, 'miner_address')
+
     previous_hash = blockchain.hash(last_block)
     block = blockchain.add_block(proof, 
                         previous_hash)
@@ -42,11 +39,12 @@ def new_transaction():
     if not all(k in values for k in required):
         return 'Missing Values', 400
     
-    sender = values['sender']
-    recipient = values['recipient']
-    amount = values['amount']
+    sender       = values['sender']
+    recipient    = values['recipient']
+    amount       = values['amount']
+    sender_nonce = values['sender_nonce'] #to prevent repudiation attack
     index = blockchain.new_transaction(sender,
-                        recipient,amount)
+                        recipient,amount, sender_nonce)
     
     response = {
         'message': f'Block #{index}'
