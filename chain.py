@@ -5,7 +5,8 @@ import requests
 from urllib.parse import urlparse
 
 MINER_REWARD    = 20
-BLOCKCHAIN_ADDR = 'BLOCKCHAIN_ADDRESS'
+YAHWEH_ACCOUNT  = 'first account'       # The account that provides miners with coins
+MAX_COINS       = 10 ** 9
 
 class AccountStore:
     def __init__(self):
@@ -18,6 +19,11 @@ class AccountStore:
         if self.contains_account(address) is False:
             return 0
         return self.store[address]['balance']
+    
+    def get_account_nonce(self, address):
+        if self.contains_account(address) is False:
+            return -1
+        return self.store[address]['nonce']
 
     def add_account(self, address, amount=0, nonce=0):
         self.store[address] = {
@@ -25,20 +31,39 @@ class AccountStore:
             'nonce'  : nonce
         }
     
-    def deposit(self, address, amount):
+    def _deposit(self, address, amount):
 
         if self.contains_account(address) is False:
             self.add_account(address, amount= amount)
 
         self.store[address]['balance'] += amount
-        self.store[address]['nonce']   += 1
 
-    def withdraw(self, address, amount):
-        #todo withraw
-        pass
+    def _withdraw(self, address, amount):        
+        self.store[address]['balance'] -= amount
+    
+    def transact(self, sender, recipient, amount, sender_nonce):
+        if self.validate_tx(sender, recipient, amount, sender_nonce) is False:
+            return False
+        
+        self._withdraw(sender , amount)
+        self._deposit(recipient, amount)
+        self.store[sender]['nonce']   += 1
 
-    def validate_tx(self, sender, receiver, amount):
-        return self.get_balance(sender) >= amount
+
+        return True
+
+
+    def validate_tx(self, sender, recipient, amount, sender_nonce):
+        if self.get_balance(sender) < amount:
+            return False
+        
+        stored_nonce = self.get_account_nonce(sender)
+        
+        return stored_nonce != -1 and stored_nonce == sender_nonce - 1
+
+    def hash_store(self):
+        json_store = json.dumps(self.store, sort_keys=True).encode()
+        return hashlib.sha256(json_store).hexdigest()
 
 class Blockchain:
     
@@ -48,8 +73,14 @@ class Blockchain:
         self.chain = []                  # List of Blocks appended in Blockchain
         self.nodes = set()               # Neighbour full-nodes that can be connected via HTTP
         # genesis block
+        self.account_store = AccountStore()
+
+        self.new_transaction('Let there be light', YAHWEH_ACCOUNT, MAX_COINS, 1 , isMinerTX=True)
+        self.staged_transactions = self.current_transactions   # first block isn't mined per say
+        self.current_transactions = []
+
         self.add_block(previous_hash='1', proof=12) # Random initial block
-    
+
 
     def register_node(self, address):
         parsed_url = urlparse(address)
@@ -65,6 +96,8 @@ class Blockchain:
         last_block = chain[0]
         current_index = 1
 
+
+
         while current_index < len(chain):
             block = chain[current_index]
             last_block_hash = self.hash(last_block)
@@ -74,10 +107,25 @@ class Blockchain:
             if not self.validate(last_block['proof'],
                         block['proof'], last_block_hash, block['transactions']):
                 return False
+            
             last_block = block
             current_index += 1
         return True
     
+    def update_account_store(self, transactions):
+
+        for tx in transactions:
+            self.account_store.transact(
+                tx['sender'], 
+                tx['recipient'], 
+                tx['amount'],
+                tx['sender_nonce']
+            )
+    
+    def get_balance(self, address):
+        return self.account_store.get_balance(address)
+
+
     def resolve_conflicts(self):
         neighbors = self.nodes
         new_chain = None
@@ -102,8 +150,6 @@ class Blockchain:
         return False
 
 
-
-
     @staticmethod
     def hash(block):
         block_string = json.dumps(block, sort_keys=True).encode()
@@ -113,11 +159,12 @@ class Blockchain:
     def last_block(self):
         return self.chain[-1]
     
-    def new_transaction(self, sender, recipient, amount, isMinerTX=False):
+    def new_transaction(self, sender, recipient, amount,sender_nonce, isMinerTX=False):
         ts = {
-            "sender": sender,
-            "recipient": recipient,
-            "amount": amount
+            "sender"       : sender,
+            "recipient"    : recipient,
+            "amount"       : amount,
+            "sender_nonce" : sender_nonce
         }
         if isMinerTX:
             self.current_transactions.append(ts)
@@ -135,6 +182,7 @@ class Blockchain:
             "previous_hash": previous_hash or self.hash(self.chain[-1])
         }
 
+        self.update_account_store(self.staged_transactions)
         self.staged_transactions = []
         self.chain.append(block)
         return block
@@ -148,10 +196,11 @@ class Blockchain:
     def mine_proof_of_work(self, last_block, miner_address):
 
         self.new_transaction(
-            sender    = BLOCKCHAIN_ADDR,
-            recipient = miner_address,
-            amount    = MINER_REWARD,
-            isMinerTX = True
+            sender       = YAHWEH_ACCOUNT,
+            recipient    = miner_address,
+            amount       = MINER_REWARD,
+            sender_nonce = self.account_store.get_account_nonce(YAHWEH_ACCOUNT),
+            isMinerTX    = True
         )
 
         last_proof = last_block['proof']

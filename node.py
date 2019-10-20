@@ -43,6 +43,7 @@ def new_transaction():
     recipient    = values['recipient']
     amount       = values['amount']
     sender_nonce = values['sender_nonce'] #to prevent repudiation attack
+    # sender_sign  = values['sign']
     index = blockchain.new_transaction(sender,
                         recipient,amount, sender_nonce)
     
@@ -50,6 +51,13 @@ def new_transaction():
         'message': f'Block #{index}'
         }
     return jsonify(response), 201
+
+@app.route('/balance', methods=['POST'])
+def get_balance():
+    address = json.loads(request.data)['address']
+    return blockchain.get_balance(address), 200
+
+
 
 @app.route('/chain', methods=['GET'])
 def full_chain():
