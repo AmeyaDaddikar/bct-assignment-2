@@ -1,8 +1,25 @@
+
 import hashlib
 import json
 
 class AccountStore:
     def __init__(self):
+        """
+        __init__ Initializes a store dictionary mapping blockchain addresses to their account
+        
+        Each expressed in the following format:
+
+        {
+            blockchainAddress(string) : {
+               'balance': int,
+               'nonce'  : int
+            }
+        }
+
+        the nonce here refers to the Account Nonce, which helps to stop double spending attack
+        https://kb.myetherwallet.com/en/transactions/what-is-nonce/
+
+        """
         self.store = {}
 
     def contains_account(self, address):
@@ -55,5 +72,13 @@ class AccountStore:
         return stored_nonce != -1 and stored_nonce == sender_nonce - 1
 
     def hash_store(self):
+        """
+        hash_store Returns a SHA256 hash of the self.store
+        
+        The hash can be used to 
+        
+        :return: [description]
+        :rtype: [type]
+        """
         json_store = json.dumps(self.store, sort_keys=True).encode()
         return hashlib.sha256(json_store).hexdigest()

@@ -6,26 +6,39 @@ from urllib.parse import urlparse
 
 from account_store import AccountStore
 
-MINER_REWARD    = 20
+MINER_REWARD    = 20                    # Miner's reward
 YAHWEH_ACCOUNT  = 'first account'       # The account that provides miners with coins
-MAX_COINS       = 10 ** 9
+MAX_COINS       = 10 ** 9               # Maximum coins with the YAHWEH_ACCOUNT (Total coins that can be mined )
 
 
 class Blockchain:
     
     def __init__(self):
-        self.current_transactions = []   # Transactions that are pending to be appended to a block in Blockchain
-        self.staged_transactions  = []   # Transactions that are put in a staging area to calculate PoW
-        self.chain = []                  # List of Blocks appended in Blockchain
-        self.nodes = set()               # Neighbour full-nodes that can be connected via HTTP
-        # genesis block
-        self.account_store = AccountStore()
+        
+        self.current_transactions = []      # Transactions that are pending to be appended to a block in Blockchain
+        self.staged_transactions  = []      # Transactions that are put in a staging area to calculate PoW
+        self.chain = []                     # List of Blocks appended in Blockchain
+        self.nodes = set()                  # Neighbour full-nodes that can be connected via HTTP
+        self.account_store = AccountStore() # AccountStore instance for the current chain in the full node
 
-        self.new_transaction('Let there be light', YAHWEH_ACCOUNT, MAX_COINS, 1 , isMinerTX=True)
+        ################################################################################################
+        ############ GENESIS BLOCK GENERATION ##########################################################
+        ################################################################################################
+
+
+        self.new_transaction(
+            sender       ='Let there be light', 
+            recipient    = YAHWEH_ACCOUNT, 
+            amount       = MAX_COINS, 
+            sender_nonce = 1 , 
+            isMinerTX    =True
+        )
         self.staged_transactions = self.current_transactions   # first block isn't mined per say
         self.current_transactions = []
 
-        self.add_block(previous_hash='1', proof=12) # Random initial block
+        self.add_block(previous_hash='1', proof=12)            # Random initial block
+
+        ################################################################################################
 
 
     def register_node(self, address):
@@ -50,8 +63,12 @@ class Blockchain:
             if block['previous_hash'] != last_block_hash:
                 return False
             
-            if not self.validate(last_block['proof'],
-                        block['proof'], last_block_hash, block['transactions']):
+            if not self.validate(
+                last_block['proof'],
+                block['proof'], 
+                last_block_hash, 
+                block['transactions']
+            ):
                 return False
             
             last_block = block

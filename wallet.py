@@ -4,6 +4,19 @@ import json
 class Wallet:
   
   def __init__(self, wallet_name, secKey, passphrase):
+    """
+    __init__ Creates a Wallet object compliant to the Blockchain. 
+    
+    The Wallet can be used with any GUI for transacting with the blockchain
+    NOTE:: This function should not be used publicaly. Instead use the method geterate() to create
+    
+    :param wallet_name: Name of the wallet
+    :type wallet_name : string
+    :param secKey     : A Private Key Instance having the capability to generate its PublicKey on demand
+    :type secKey      : Crypto.PublicKey.ECC.EccKey
+    :param passphrase : A password to protect the wallet when saved on disk
+    :type passphrase  : string
+    """
     self.secKey      = secKey
     self.passphrase  = passphrase
     self.wallet_name = wallet_name

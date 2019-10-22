@@ -6,6 +6,7 @@ from chain import Blockchain
 app = Flask(__name__)
 
 node_identifier = str(uuid4()).replace('-','')
+node_miners_Key = 'NODE_KEY'                        # The publicKey/Address of the Full Node that it uses to mine the transactions
 
 blockchain = Blockchain()
 
@@ -42,10 +43,14 @@ def new_transaction():
     sender       = values['sender']
     recipient    = values['recipient']
     amount       = values['amount']
-    sender_nonce = values['sender_nonce'] #to prevent repudiation attack
-    # sender_sign  = values['sign']
-    index = blockchain.new_transaction(sender,
-                        recipient,amount, sender_nonce)
+    sender_nonce = values['sender_nonce'] # to prevent doubles-spending attack
+    #todo sender_sign  = values['sign']   # to verify the sender
+    index = blockchain.new_transaction(
+        sender,
+        recipient,
+        amount,
+        sender_nonce
+    )
     
     response = {
         'message': f'Block #{index}'
