@@ -61,15 +61,27 @@ In my blockchain, say someone tries a Man-In-The-Middle Attack on a client and g
 
 However, since for every transaction, a new nonce is required, this means that the next transaction will be signed using a new nonce. Hence the attacker cannot perform the replay attack.
 
+### Code Structure
+```
+.
+├── account_store.py        # AccountStore class that handles the Account/Balance TX model
+├── node.py                 # API endpoints to access the full-node
+├── chain.py                # The main Blockchain class (contains blocks, consensus, conflict-resolution, etc.)
+├── wallet.py               # A Wallet module that helps creation and retrieval of miner/client wallets
+├── dependencies.txt        # List of Python Modules and Libraries
+├── .gitignore
+└── README.md
+```
+
 ### Miscellaneous design decisions
 1. wallet.py has a method save() and restore() to save and retrieve wallets from disk. The key is stored in PEM encrypted format, using the passphrase. So the wallet user needs the passphrase to retrieve these wallets.
 2. There is a YAHWEH account which is given all the coins in the Genesis Block. This account in turn rewards the miners. So the Blockchain maintains a limited number of mineable coins in the ecosystem.
-3. in Blockchain class in chain.py, self.staged_transactions is added so that once the miner starts mining
+3. in Blockchain class in chain.py, self.staged_transactions is added so that once the miner starts mining, the miner focuses on mining the staged_transactions and the rest of the full-node is free to collect the next batch of transactions in current_transactions
 ```(python)
 self.staged_transactions  = self.current_transactions[:]
 self.current_transactions = []
 ```
-4. PoW validate() function takes transactions to calculate the new proof. This accounts for integrity of the current transactions as well while mining the current block. So miner focuses on mining the staged_transactions and can collect the next batch of transactions in current_transactions
+4. PoW validate() function takes transactions to calculate the new proof. This accounts for integrity of the current transactions as well while mining the current block.
   ```
   def validate(last_proof, proof, last_hash, transactions=[]):
       guess = f"{last_proof}{proof}{last_hash}{json.dumps(transactions)}".encode()
